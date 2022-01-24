@@ -65,7 +65,8 @@ public class SerializationTest {
                 .from(result)
                 .asClass(SomePrimitiveValuesHolder.class)
                 .unshrink();
-
     }
+
+
 
 }
