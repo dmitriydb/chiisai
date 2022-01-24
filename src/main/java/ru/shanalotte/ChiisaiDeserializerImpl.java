@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.Arrays;
+import java.lang.reflect.Modifier;
 import java.util.BitSet;
 import static ru.shanalotte.Chiisai.*;
 import static ru.shanalotte.DescriptorType.*;
@@ -13,29 +13,30 @@ import static ru.shanalotte.DescriptorType.*;
 public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
     private int nextPosition;
     private BitSet bits;
-     private static final Logger logger = LoggerFactory.getLogger(ChiisaiDeserializerImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(ChiisaiDeserializerImpl.class);
 
     @Override
     public Object deserialize(BitSet bits, Class targetClass) {
-        logger.debug("Десериализуем {}", targetClass);
         this.nextPosition = 0;
         try {
             this.bits = bits;
             Object result = targetClass.newInstance();
             for (Field field : targetClass.getDeclaredFields()){
-                logger.debug(field.getName());
+                if (Modifier.isStatic(field.getModifiers()) || Modifier.isFinal(field.getModifiers())){
+                    continue;
+                }
                 if (field.getName().contains("__$lineHits$__")) continue;
-                logger.debug("Field name = {}", field.getName());
                 field.setAccessible(true);
+                logger.debug("Десериализуем поле {}", field.getName());
                 Object fieldValue = readNextField(field);
                 if (fieldValue != null && fieldValue.getClass().isArray()){
                     Object arr = Array.newInstance(field.getType().getComponentType(), Array.getLength(fieldValue));
                     for (int i = 0; i < Array.getLength(fieldValue); i++)
                         Array.set(arr, i, Array.get(fieldValue, i));
-                    field.set(result, arr);
+                        field.set(result, arr);
                 }
                 else
-                field.set(result, fieldValue);
+                    field.set(result, fieldValue);
             }
             return result;
         } catch (InstantiationException e) {
@@ -50,9 +51,8 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
         //читаем тип поля
         DescriptorType descriptor = readDescriptor();
         logger.debug("Прочитали дескриптор {}", descriptor.toString());
-        //читаем длину поля
-
         if (descriptor == NULL){
+            logger.debug("= NULL, continue");
             return null;
         }
         if (descriptor == OBJECT){
@@ -60,6 +60,7 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
             BitSet newbits = new BitSet();
             String bitsLine = readNextNBits(OBJECT_VALUE_LENGTH);
             int objectDataLength = (int)binaryStringToNumber(bitsLine);
+            logger.debug("Длина содержимого объекта = {} бит", objectDataLength);
             for (int i = 0; i < objectDataLength; i++){
                 if (bits.get(nextPosition + i))
                     newbits.set(i);
@@ -79,34 +80,31 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
             return result;
         }
         if (descriptor == ARRAY){
-            String bitsLine = readNextNBits(ARRAY_VALUE_LENGTH);
+            String bitsLine = readNextNBits(ARRAY_SIZE_LENGTH);
             int arrayLength = (int)binaryStringToNumber(bitsLine);
+            logger.debug("Длина массива = {}", arrayLength);
             Object[] resultArray = new Object[arrayLength];
             for (int i = 0; i < arrayLength; i++){
                  resultArray[i] = readNextField(field);
             }
             return unpackArray(resultArray);
         }
-
         if (descriptor == STRING){
-            logger.debug("Это строка");
             String bitsLine = readNextNBits(VALUE_LENGTH);
             int len = (int)binaryStringToNumber(bitsLine);
-            logger.debug("Длина поля равна {} бит", len);
+            logger.debug("Длина содержимого строки = {} бит", len);
             String valueLine = readNextNBits(len);
             String result = BinaryUtil.binaryToText(valueLine);
-            logger.debug("Значение строки [{}]", result);
+            logger.debug("Значение строки = '{}'", result);
             return result;
         }
-
         if (descriptor == BOOLEAN){
-            logger.debug("Это boolean");
             String bitsLine = readNextNBits(1);
             return bitsLine.equals("1");
         }
         String bitsLine = readNextNBits(VALUE_LENGTH);
         int len = (int)binaryStringToNumber(bitsLine);
-        logger.debug("Длина поля равна {} бит", len);
+        logger.debug("Длина содержимого равна {} бит", len);
         String valueLine = readNextNBits(len);
 
         if (descriptor == FLOAT){
@@ -131,7 +129,6 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
             return binaryStringToSignedNumber(valueLine);
         }
         return null;
-        //считываем значение поля
     }
 
 
@@ -143,7 +140,6 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
 
     private long binaryStringToNumber(String bitsLine){
         long result =  Integer.parseInt(bitsLine, 2);
-        logger.debug("Значение [{}] ", result);
         return result;
     }
 
@@ -156,7 +152,6 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
         }
         else
         if (isNegative) result = -result;
-        logger.debug("Значение [{}] ", result);
         return result;
     }
 
@@ -169,7 +164,7 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
                 result.append("0");
         }
         nextPosition += n;
-        logger.debug("Считали [{}]", result.toString());
+        logger.debug("Считали биты [{}]", result);
         return result.toString();
     }
 

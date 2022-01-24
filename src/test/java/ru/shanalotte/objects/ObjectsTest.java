@@ -41,4 +41,12 @@ public class ObjectsTest {
         System.out.println(target);
         System.out.println(unshrinked);
     }
+
+    @Test
+    public void listSerialization(){
+        ListHolder listHolder = new ListHolder();
+        ListHolder unshrinked = (ListHolder) chiisai.shrink(listHolder).andUnshrink();
+        System.out.println(listHolder);
+        System.out.println(unshrinked);
+    }
 }

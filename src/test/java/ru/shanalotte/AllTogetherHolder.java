@@ -11,7 +11,6 @@ public class AllTogetherHolder {
     private double doubleValue = 7123.13112834d;
     private char charValue = 'd';
     private boolean booleanValue = true;
-
     private Byte b = 12;
     private Short s = null;
     private Integer i = 234;
@@ -20,7 +19,6 @@ public class AllTogetherHolder {
     private Double d = 2345.1823d;
     private Character c = '\u8123';
     private Boolean bw = true;
-
     private String str = "Hello world";
     private String str2 = "";
 

@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.*;
 
 import static ru.shanalotte.Chiisai.*;
@@ -17,7 +18,7 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer {
 
     private static final Set<Class<?>> WRAPPER_TYPES = getWrapperTypes();
 
-    public static boolean isWrapperType(Class<?> clazz) {
+    private static boolean isWrapperType(Class<?> clazz) {
         return WRAPPER_TYPES.contains(clazz);
     }
 
@@ -45,15 +46,19 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer {
     public void serializeObject(Object target) throws IllegalAccessException {
         Field[] fields = target.getClass().getDeclaredFields();
         for (Field field : fields) {
+            //игнорируем поле, добавляемое в классы IDEA во время тестирования с покрытием
             if (field.getName().equals("__$lineHits$__")) continue;
+            if (Modifier.isStatic(field.getModifiers()) || Modifier.isFinal(field.getModifiers())){
+                continue;
+            }
+            logger.debug("Сериализуется поле {}", field.getName());
             field.setAccessible(true);
             writeObject(field.get(target));
         }
     }
 
     private void writeTypeDescriptor(int descriptor) {
-        logger.debug("Writing descriptor {}", descriptor);
-
+        logger.debug("Writing {} descriptor ({})", DescriptorType.values()[descriptor].name(), Integer.toBinaryString(descriptor));
         for (int i = DESCRIPTOR_LENGTH - 1; i >= 0; i--) {
             if ((descriptor % 2) == 1) {
                 bits.set(nextPosition + i);
@@ -63,9 +68,16 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer {
         nextPosition += DESCRIPTOR_LENGTH;
     }
 
+    /**
+     * Сериализует число типа long
+     * Перед битами значения числа записывает 1 дополнительный бит знака (1 - если число отрицательное)
+     * Должно учитываться во время десериализации
+     *
+     * @param value
+     */
     private void writeLongValue(long value) {
-        logger.debug("Writing long value {}", value);
-
+        long oldValue = value;
+        logger.debug("value {}", value);
         boolean isNegative = false;
         if (value < 0) {
             isNegative = true;
@@ -83,6 +95,7 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer {
         }
         while (value != 0);
         writeLength(len + 1);
+        logger.debug("Записано число {} ({})", oldValue, Long.toBinaryString(oldValue));
         if (isNegative) {
             bits.set(nextPosition);
         }
@@ -95,7 +108,7 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer {
     }
 
     private void writeLength(int length) {
-        logger.debug("Writing length {}", length);
+        logger.debug("Длина содержимого = {} бит ({})", length, Integer.toBinaryString(length));
         for (int i = VALUE_LENGTH; i >= 0; i--) {
             if (length % 2 == 1) {
                 bits.set(nextPosition + i - 1);
@@ -106,7 +119,7 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer {
     }
 
     private void writeObjectLength(int length) {
-        logger.debug("Writing object length {}", length);
+        logger.debug("Длина объекта {} бит ({})", length, Integer.toBinaryString(length));
         for (int i = OBJECT_VALUE_LENGTH; i >= 0; i--) {
             if (length % 2 == 1) {
                 bits.set(nextPosition + i - 1);
@@ -155,10 +168,9 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer {
     }
 
     private void writeDoubleValue(Double value) {
-        logger.debug("Writing double value {}", value);
         String valueString = Long.toBinaryString(Double.doubleToRawLongBits(value));
-        logger.debug("Записываем {}", valueString);
         writeLength(valueString.length());
+        logger.debug("Writing double value {} ({})", value, valueString);
         for (char c : valueString.toCharArray()) {
             if (c == '1')
                 bits.set(nextPosition);
@@ -168,7 +180,7 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer {
 
     public void writeObject(Object value) {
         int descriptor = 0;
-        if (value == null){
+        if (value == null) {
             writeTypeDescriptor(DescriptorType.NULL.ordinal());
             return;
         }
@@ -178,26 +190,22 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer {
             descriptor = DescriptorType.STRING.ordinal();
         } else if (value.getClass().isArray()) {
             descriptor = DescriptorType.ARRAY.ordinal();
-        }
-        else
-        {
+        } else {
             try {
                 descriptor = DescriptorType.OBJECT.ordinal();
                 writeTypeDescriptor(descriptor);
-
                 int oldPosition = nextPosition;
                 BitSet oldBitSet = bits;
                 bits = new BitSet();
                 serializeObject(value);
                 int newPosition = nextPosition;
-                logger.debug("Object bits writed = {}", (newPosition - oldPosition));
+                logger.debug("Битов объекта записано {}", (newPosition - oldPosition));
                 int objectLen = newPosition - oldPosition;
-
                 BitSet writedBits = bits;
                 bits = oldBitSet;
                 nextPosition = oldPosition;
                 writeObjectLength(objectLen);
-                for (int i = oldPosition; i < newPosition; i++){
+                for (int i = oldPosition; i < newPosition; i++) {
                     if (writedBits.get(i))
                         bits.set(nextPosition);
                     nextPosition++;
@@ -207,15 +215,10 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer {
             }
             return;
         }
-        logger.debug("Descriptor {}", descriptor);
         writeTypeDescriptor(descriptor);
-        //записать длину значения
-        //записать значение
-        if (descriptor == DescriptorType.ARRAY.ordinal()){
+        if (descriptor == DescriptorType.ARRAY.ordinal()) {
             writeArray(value);
-        }
-        else
-        if (descriptor == DescriptorType.STRING.ordinal()) {
+        } else if (descriptor == DescriptorType.STRING.ordinal()) {
             writeStringValue(value);
         } else
             writePrimitiveValue(value);
@@ -224,25 +227,26 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer {
     private void writeArray(Object value) {
         Object[] array = unpackArray(value);
         writeArrayLength(array.length);
-        for (Object v : array){
+        for (Object v : array) {
             writeObject(v);
         }
     }
 
     private void writeArrayLength(int length) {
-        logger.debug("Writing length {}", length);
-        for (int i = ARRAY_VALUE_LENGTH; i >= 0; i--) {
+        logger.debug("Пишется массив длиной {} ({})", length, Integer.toBinaryString(length));
+        for (int i = ARRAY_SIZE_LENGTH; i >= 0; i--) {
             if (length % 2 == 1) {
                 bits.set(nextPosition + i - 1);
             }
             length /= 2;
         }
-        nextPosition += ARRAY_VALUE_LENGTH;
+        nextPosition += ARRAY_SIZE_LENGTH;
     }
 
     private void writeStringValue(Object stringValue) {
         String bitsString = BinaryUtil.convertStringToBinary((String) stringValue);
         writeLength(bitsString.length());
+        logger.debug("Записываем строку {} ({})", stringValue, bitsString);
         writeBitsString(bitsString);
     }
 
@@ -254,26 +258,26 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer {
         }
     }
 
-    public static Object[] unpackArray(final Object value)
-    {
-        if(value == null) return null;
-        if(value.getClass().isArray())
-        {
-            if(value instanceof Object[])
-            {
-                return (Object[])value;
-            }
-            else // box primitive arrays
+    /**
+     * Распаковывает объект типа Array в массив Object[]
+     *
+     * @param value
+     * @return
+     */
+    private static Object[] unpackArray(final Object value) {
+        if (value == null) return null;
+        if (value.getClass().isArray()) {
+            if (value instanceof Object[]) {
+                return (Object[]) value;
+            } else // box primitive arrays
             {
                 final Object[] boxedArray = new Object[Array.getLength(value)];
-                for(int index=0;index<boxedArray.length;index++)
-                {
+                for (int index = 0; index < boxedArray.length; index++) {
                     boxedArray[index] = Array.get(value, index); // automatic boxing
                 }
                 return boxedArray;
             }
-        }
-        else throw new IllegalArgumentException("Not an array");
+        } else throw new IllegalArgumentException("Not an array");
     }
 
 }

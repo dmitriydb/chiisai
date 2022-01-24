@@ -37,27 +37,16 @@ public class SerializationTest {
     @Test
     public void singleIntHolder(){
         SingleIntHolder target = new SingleIntHolder();
-        target.value = 5;
-        chiisai.shrink(target).andStoreIn(result);
-
-        SingleIntHolder unshrinked = (SingleIntHolder) chiisai
-                .from(result)
-                .asClass(SingleIntHolder.class)
-                .unshrink();
-        assertEquals(unshrinked.value, 5);
+        SingleIntHolder unshrinked = (SingleIntHolder) chiisai.shrink(target).andUnshrink();
+        assertEquals(unshrinked.value, 4);
     }
 
     @Test
     public void singleIntHolderSequel(){
         SingleIntHolder2 target = new SingleIntHolder2();
-        target.value = 10;
-        chiisai.shrink(target).andStoreIn(result);
-
-        SingleIntHolder2 unshrinked = (SingleIntHolder2) chiisai
-                .from(result)
-                .asClass(SingleIntHolder2.class)
-                 .unshrink();
-        assertEquals(unshrinked.value, 10);
+        target.value = 333;
+        SingleIntHolder2 unshrinked = (SingleIntHolder2) chiisai.shrink(target).andUnshrink();
+        assertEquals(unshrinked.value, 333);
     }
 
     @Test
@@ -71,10 +60,7 @@ public class SerializationTest {
     public void tryingToUnshrinkTheClassWithAllPrimitivesSet(){
         SomePrimitiveValuesHolder target = new SomePrimitiveValuesHolder();
         chiisai.shrink(target).andStoreIn(result);
-        SomePrimitiveValuesHolder unshrinked = (SomePrimitiveValuesHolder) chiisai
-                .from(result)
-                .asClass(SomePrimitiveValuesHolder.class)
-                .unshrink();
+        SomePrimitiveValuesHolder unshrinked = (SomePrimitiveValuesHolder) chiisai.shrink(target).andUnshrink();
     }
 
     @Test

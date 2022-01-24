@@ -3,10 +3,14 @@ package ru.shanalotte;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.BitSet;
 
 public class BinaryUtil {
      private static final Logger logger = LoggerFactory.getLogger(BinaryUtil.class);
@@ -50,6 +54,16 @@ public class BinaryUtil {
         }
         return result.toString();
 
+    }
+
+    public static byte[] readBytesFromInputStream(InputStream in) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        int nRead;
+        byte[] data = new byte[16384];
+        while ((nRead = in.read(data, 0, data.length)) != -1) {
+            buffer.write(data, 0, nRead);
+        }
+        return buffer.toByteArray();
     }
 
     public static String binaryToText(String binary) {

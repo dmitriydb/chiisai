@@ -25,7 +25,6 @@ public class StringTest {
     public void stringsTest(){
         StringHolder target = new StringHolder();
         StringHolder unshrinked = (StringHolder) chiisai.shrink(target).andUnshrink();
-
         System.out.println(target);
         System.out.println(unshrinked);
         assertEquals(target, unshrinked);

@@ -24,12 +24,8 @@ public class PrimitivesTest {
     @Test
     public void byteTest(){
         PrimitiveBytesHolder target = new PrimitiveBytesHolder();
+        PrimitiveBytesHolder unshrinked = (PrimitiveBytesHolder) chiisai.shrink(target).andUnshrink();
 
-        chiisai.shrink(target).andStoreIn(result);
-        PrimitiveBytesHolder unshrinked = (PrimitiveBytesHolder) chiisai
-                .from(result)
-                .asClass(PrimitiveBytesHolder.class)
-                .unshrink();
         System.out.println(target);
         System.out.println(unshrinked);
         assertEquals(target.b1, unshrinked.b1);
