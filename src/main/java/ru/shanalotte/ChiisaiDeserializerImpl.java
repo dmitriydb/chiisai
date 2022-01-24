@@ -3,7 +3,9 @@ package ru.shanalotte;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.util.Arrays;
 import java.util.BitSet;
 import static ru.shanalotte.Chiisai.*;
 import static ru.shanalotte.DescriptorType.*;
@@ -15,15 +17,24 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
 
     @Override
     public Object deserialize(BitSet bits, Class targetClass) {
+        logger.debug("Десериализуем {}", targetClass);
         this.nextPosition = 0;
         try {
             this.bits = bits;
             Object result = targetClass.newInstance();
             for (Field field : targetClass.getDeclaredFields()){
+                logger.debug(field.getName());
                 if (field.getName().contains("__$lineHits$__")) continue;
                 logger.debug("Field name = {}", field.getName());
                 field.setAccessible(true);
-                Object fieldValue = readNextField();
+                Object fieldValue = readNextField(field);
+                if (fieldValue != null && fieldValue.getClass().isArray()){
+                    Object arr = Array.newInstance(field.getType().getComponentType(), Array.getLength(fieldValue));
+                    for (int i = 0; i < Array.getLength(fieldValue); i++)
+                        Array.set(arr, i, Array.get(fieldValue, i));
+                    field.set(result, arr);
+                }
+                else
                 field.set(result, fieldValue);
             }
             return result;
@@ -35,19 +46,47 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
         return null;
     }
 
-    private boolean readNullFlag(){
-        nextPosition++;
-        return bits.get(nextPosition - 1);
-    }
-
-    private Object readNextField() {
+    private Object readNextField(Field field) {
         //читаем тип поля
         DescriptorType descriptor = readDescriptor();
         logger.debug("Прочитали дескриптор {}", descriptor.toString());
         //читаем длину поля
-        boolean isNull = readNullFlag();
-        if (isNull) return null;
 
+        if (descriptor == NULL){
+            return null;
+        }
+        if (descriptor == OBJECT){
+            BitSet oldbits = bits;
+            BitSet newbits = new BitSet();
+            String bitsLine = readNextNBits(OBJECT_VALUE_LENGTH);
+            int objectDataLength = (int)binaryStringToNumber(bitsLine);
+            for (int i = 0; i < objectDataLength; i++){
+                if (bits.get(nextPosition + i))
+                    newbits.set(i);
+            }
+            nextPosition += objectDataLength;
+            int oldPosition = nextPosition;
+            nextPosition = 0;
+            bits = newbits;
+            Object result = null;
+            try {
+                result = deserialize(bits, Class.forName(field.getType().getCanonicalName()));
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+            bits = oldbits;
+            nextPosition = oldPosition;
+            return result;
+        }
+        if (descriptor == ARRAY){
+            String bitsLine = readNextNBits(ARRAY_VALUE_LENGTH);
+            int arrayLength = (int)binaryStringToNumber(bitsLine);
+            Object[] resultArray = new Object[arrayLength];
+            for (int i = 0; i < arrayLength; i++){
+                 resultArray[i] = readNextField(field);
+            }
+            return unpackArray(resultArray);
+        }
 
         if (descriptor == STRING){
             logger.debug("Это строка");
@@ -88,7 +127,10 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
         if (descriptor == CHAR){
             return (char)binaryStringToSignedNumber(valueLine);
         }
-        return binaryStringToSignedNumber(valueLine);
+        if (descriptor == LONG){
+            return binaryStringToSignedNumber(valueLine);
+        }
+        return null;
         //считываем значение поля
     }
 
@@ -130,4 +172,27 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
         logger.debug("Считали [{}]", result.toString());
         return result.toString();
     }
+
+    public static Object[] unpackArray(final Object value)
+    {
+        if(value == null) return null;
+        if(value.getClass().isArray())
+        {
+            if(value instanceof Object[])
+            {
+                return (Object[])value;
+            }
+            else // box primitive arrays
+            {
+                final Object[] boxedArray = new Object[Array.getLength(value)];
+                for(int index=0;index<boxedArray.length;index++)
+                {
+                    boxedArray[index] = Array.get(value, index); // automatic boxing
+                }
+                return boxedArray;
+            }
+        }
+        else throw new IllegalArgumentException("Not an array");
+    }
+
 }

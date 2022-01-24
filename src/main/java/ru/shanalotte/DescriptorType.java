@@ -10,9 +10,11 @@ public enum DescriptorType {
     DOUBLE("double", "java.lang.Double"),
     FLOAT("float", "java.lang.Float"),
     CHAR("char", "java.lang.Character"),
-    STRING("string", "java.lang.String");
+    STRING("string", "java.lang.String"),
+    OBJECT("object", "java.lang.Object"),
+    ARRAY("array", "java.lang.Array"),
+    NULL("null", "null");
 
-    
     private String primitiveTypeName;
     private String wrapperTypeName;
 

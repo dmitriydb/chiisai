@@ -77,6 +77,10 @@ public class SerializationTest {
                 .unshrink();
     }
 
-
-
+    @Test
+    public void allTogetherTest(){
+        AllTogetherHolder holder = new AllTogetherHolder();
+        AllTogetherHolder unshrinked = (AllTogetherHolder) chiisai.shrink(holder).andUnshrink();
+        assertTrue(holder.equals(unshrinked));
+    }
 }

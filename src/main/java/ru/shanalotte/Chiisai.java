@@ -15,6 +15,9 @@ public class Chiisai {
 
     public static final int DESCRIPTOR_LENGTH = 4;
     public static final int VALUE_LENGTH = 8;
+    public static final int ARRAY_VALUE_LENGTH = 16;
+    public static final int OBJECT_VALUE_LENGTH = 16;
+    public static final int CACHED_OBJECT_REFERENCE_LENGTH = 8;
 
     private Object target;
     private List<Byte> listByteHolder;
@@ -45,7 +48,6 @@ public class Chiisai {
         }
         return this;
     }
-
 
     public void andStoreIn(List<Byte> result){
         for (byte b : bits.toByteArray()){

@@ -53,6 +53,7 @@ public class BinaryUtil {
     }
 
     public static String binaryToText(String binary) {
+        if (binary.equals("")) return "";
         return Arrays.stream(binary.split("(?<=\\G.{8})"))/* regex to split the bits array by 8*/
                 .parallel()
                 .map(eightBits -> (char)Integer.parseInt(eightBits, 2))
