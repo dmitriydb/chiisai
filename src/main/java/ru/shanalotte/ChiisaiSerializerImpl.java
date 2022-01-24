@@ -151,21 +151,23 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer{
 
     private void serializeField(Field field, BitSet bits, Object target) throws IllegalAccessException {
         field.setAccessible(true);
+        int descriptor = 0;
         if (field.getType().isPrimitive()){
             //записать тип
-            int descriptor = Arrays.stream(PrimitiveTypeDescriptor.values()).filter(value -> value.getPrimitiveTypeName().equals(field.getType().getTypeName())).findFirst().orElse(null).ordinal();
-            writeTypeDescriptor(bits, descriptor);
-            //записать длину значения
-            writePrimitiveValue(field.get(target));
-            //записать значение
+            descriptor = Arrays.stream(PrimitiveTypeDescriptor.values()).filter(value -> value.getPrimitiveTypeName().equals(field.getType().getTypeName())).findFirst().orElse(null).ordinal();
         }
         else if (isWrapperType(field.getType())){
-            System.out.println(field.getType().getTypeName());
-            int descriptor = Arrays.stream(PrimitiveTypeDescriptor.values()).filter(value -> value.getWrapperTypeName().equals(field.getType().getTypeName())).findFirst().orElse(null).ordinal();
-            writeTypeDescriptor(bits, descriptor);
-            //записать длину значения
-            writePrimitiveValue(field.get(target));
+           descriptor = Arrays.stream(PrimitiveTypeDescriptor.values()).filter(value -> value.getWrapperTypeName().equals(field.getType().getTypeName())).findFirst().orElse(null).ordinal();
         }
-
+        writeTypeDescriptor(bits, descriptor);
+        if (field.get(target) == null){
+            bits.set(nextPosition);
+            nextPosition++;
+            return;
+        }
+        nextPosition++;
+        //записать длину значения
+        //записать значение
+        writePrimitiveValue(field.get(target));
     }
 }

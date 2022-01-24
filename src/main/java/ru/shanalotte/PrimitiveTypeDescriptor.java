@@ -9,9 +9,9 @@ public enum PrimitiveTypeDescriptor {
     BOOLEAN("boolean", "java.lang.Boolean"),
     DOUBLE("double", "java.lang.Double"),
     FLOAT("float", "java.lang.Float"),
-    CHAR("char", "java.lang.Character"),
-    NULL("null", "null");
+    CHAR("char", "java.lang.Character");
 
+    
     private String primitiveTypeName;
     private String wrapperTypeName;
 

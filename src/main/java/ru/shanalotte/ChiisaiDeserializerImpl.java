@@ -32,11 +32,21 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
         return null;
     }
 
+    private boolean readNullFlag(){
+        nextPosition++;
+        if (bits.get(nextPosition - 1))
+            return true;
+        return false;
+    }
+
     private Object readNextField() {
         //читаем тип поля
         PrimitiveTypeDescriptor descriptor = readDescriptor();
         logger.debug("Прочитали дескриптор {}", descriptor.toString());
         //читаем длину поля
+        boolean isNull = readNullFlag();
+        if (isNull) return null;
+
         if (descriptor == PrimitiveTypeDescriptor.BOOLEAN){
             logger.debug("Это boolean");
             String bitsLine = readNextNBits(1);
@@ -71,7 +81,7 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
 
 
     private PrimitiveTypeDescriptor readDescriptor() {
-        String bitsLine = readNextNBits(4);
+        String bitsLine = readNextNBits(DESCRIPTOR_LENGTH);
         int descriptor = (int)binaryStringToNumber(bitsLine);
         return PrimitiveTypeDescriptor.values()[descriptor];
     }

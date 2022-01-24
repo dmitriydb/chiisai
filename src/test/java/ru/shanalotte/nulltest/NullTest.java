@@ -19,5 +19,7 @@ public class NullTest {
 
         assertEquals(unshrinked.value, null);
         assertEquals(unshrinked.intvalue, target.intvalue);
+        System.out.println(target);
+        System.out.println(unshrinked);
     }
 }

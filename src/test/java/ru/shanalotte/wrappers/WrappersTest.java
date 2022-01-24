@@ -15,7 +15,7 @@ public class WrappersTest {
     public void boxedValuesTest(){
         BoxedValuesHolder target = new BoxedValuesHolder();
         BoxedValuesHolder unshrinked = (BoxedValuesHolder) chiisai.shrink(target).andUnshrink();
-
-       assertEquals(target, unshrinked);
+        assertEquals(target, unshrinked);
     }
+
 }
