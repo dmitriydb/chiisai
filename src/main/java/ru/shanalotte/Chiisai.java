@@ -1,12 +1,10 @@
 package ru.shanalotte;
 
 import java.lang.reflect.Field;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
-import static ru.shanalotte.PrimitiveTypeDescriptors.*;
 
 public class Chiisai {
 
@@ -15,7 +13,6 @@ public class Chiisai {
     private Object target;
     private List<Byte> listByteHolder;
     private Class targetClass;
-
 
     public Chiisai shrink(Object target){
         Chiisai result = new Chiisai();
@@ -35,8 +32,6 @@ public class Chiisai {
         for (Field field : fields){
             writeFieldIntoBits(field, bits, target);
         }
-
-
     }
 
     private void writeTypeDescriptorIntoBits(BitSet bits, int descriptor){
@@ -51,7 +46,7 @@ public class Chiisai {
         nextPosition += 4;
     }
 
-    private void writeDecimalIntoBits(BitSet bits, long number){
+    private void writeLongValueIntoBits(BitSet bits, long number){
         System.out.println("Writing value " + Long.toBinaryString(number));
         int len = 0;
         List<Integer> positions = new ArrayList<>();
@@ -75,14 +70,14 @@ public class Chiisai {
 
     private void writePrimitiveTypeLengthIntoBits(BitSet bits, int len) {
         System.out.println("Writing len" + Integer.toBinaryString(len));
-        for (int i = 6; i >= 0; i--) {
+        for (int i = 8; i >= 0; i--) {
             if (len % 2 == 1){
                 bits.set(nextPosition + i - 1 );
                 System.out.println("Setting pos #" + (nextPosition + i - 1));
             }
             len /= 2;
         }
-        nextPosition += 6;
+        nextPosition += 8;
         System.out.println("==LEN DONE");
     }
 
@@ -93,23 +88,82 @@ public class Chiisai {
             long longValue = 0L;
             if (value instanceof Integer){
                 longValue = number.intValue();
-                writeDecimalIntoBits(bits, longValue);
+                writeLongValueIntoBits(bits, longValue);
             }
             if (value instanceof Byte){
                 longValue = number.byteValue();
-                writeDecimalIntoBits(bits, longValue);
+                writeLongValueIntoBits(bits, longValue);
             }
             if (value instanceof Long){
                 longValue = number.longValue();
-                writeDecimalIntoBits(bits, longValue);
+                writeLongValueIntoBits(bits, longValue);
             }
             if (value instanceof Short){
                 longValue = number.shortValue();
-                writeDecimalIntoBits(bits, longValue);
+                writeLongValueIntoBits(bits, longValue);
+            }
+            if (value instanceof Double || value instanceof Float){
+                Double doubleValue = number.doubleValue();
+                writeDoubleValueIntoBits(bits, doubleValue);
             }
         }
+        if (value instanceof Character){
+            Character ch = (Character) value;
+            long longValue = ch.charValue();
+            writeLongValueIntoBits(bits, longValue);
+        }
+        if (value instanceof Boolean){
+            Boolean booleanValue = (Boolean) value;
+            if (booleanValue.booleanValue())
+                bits.set(nextPosition);
+        }
 
+    }
 
+    private void writeDoubleValueIntoBits(BitSet bits, Double doubleValue) {
+        String value = Long.toBinaryString(Double.doubleToRawLongBits(doubleValue));
+        int length = value.length();
+        value = value.replace("0", " ");
+        value = value.trim();
+        value = value.replace(" ", "0");
+
+        System.out.println("Writing " + value + " into bits");
+        writePrimitiveTypeLengthIntoBits(bits, length);
+        for (char c : value.toCharArray()){
+            if (c == '1')
+                bits.set(nextPosition);
+            nextPosition++;
+        }
+        System.out.println(binStrToDbl(value));
+    }
+
+    static double binStrToDbl(String myBinStr)
+    {
+        double myDbl = 0.0;
+        String myRegex = "[01]*";
+        if(myBinStr == null || myBinStr == "" ||
+                myBinStr.length() > 64 || !myBinStr.matches(myRegex))
+        {
+            // throw an error
+        }
+        if (myBinStr.length() == 64)
+        {
+            if (myBinStr.charAt(0) == '1')
+            {
+                String negBinStr = myBinStr.substring(1);
+                myDbl = -1 * Double.longBitsToDouble(Long.parseLong(negBinStr, 2));
+            }
+            else if (myBinStr.charAt(0) == '0')
+            {
+                myDbl = Double.longBitsToDouble(Long.parseLong(myBinStr, 2));
+            }
+        }
+        else if(myBinStr.length() < 64)
+        {
+            myDbl = Double.longBitsToDouble(Long.parseLong(myBinStr, 2));
+        }
+
+        return myDbl;
     }
 
     private void writeFieldIntoBits(Field field, BitSet bits, Object target) throws IllegalAccessException {
@@ -144,12 +198,10 @@ public class Chiisai {
     public Object unshrink() {
 
         byte[] bytes = new byte[listByteHolder.size()];
-
         for (int i = 0; i < listByteHolder.size(); i++)
             bytes[i] = listByteHolder.get(i);
-
         BitSet bits = BitSet.valueOf(bytes);
-
+        System.out.println(bits);
         //TODO записать все поля из битсета
 
         try {

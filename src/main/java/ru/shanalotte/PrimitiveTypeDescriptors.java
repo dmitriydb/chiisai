@@ -1,6 +1,7 @@
 package ru.shanalotte;
 
 public enum PrimitiveTypeDescriptors {
+
     BYTE("byte"),
     SHORT("short"),
     INT("int"),
