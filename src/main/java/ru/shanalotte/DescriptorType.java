@@ -1,6 +1,6 @@
 package ru.shanalotte;
 
-public enum PrimitiveTypeDescriptor {
+public enum DescriptorType {
 
     BYTE("byte", "java.lang.Byte"),
     SHORT("short", "java.lang.Short"),
@@ -9,13 +9,14 @@ public enum PrimitiveTypeDescriptor {
     BOOLEAN("boolean", "java.lang.Boolean"),
     DOUBLE("double", "java.lang.Double"),
     FLOAT("float", "java.lang.Float"),
-    CHAR("char", "java.lang.Character");
+    CHAR("char", "java.lang.Character"),
+    STRING("string", "java.lang.String");
 
     
     private String primitiveTypeName;
     private String wrapperTypeName;
 
-    PrimitiveTypeDescriptor(String primitiveTypeName, String wrapperTypeName) {
+    DescriptorType(String primitiveTypeName, String wrapperTypeName) {
         this.primitiveTypeName = primitiveTypeName;
         this.wrapperTypeName = wrapperTypeName;
     }

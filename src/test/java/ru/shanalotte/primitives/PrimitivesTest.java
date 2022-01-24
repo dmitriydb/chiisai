@@ -1,5 +1,7 @@
 package ru.shanalotte.primitives;
 
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import ru.shanalotte.Chiisai;
 
@@ -11,6 +13,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class PrimitivesTest {
     private Chiisai chiisai = new Chiisai();
     private List<Byte> result = new ArrayList<>();
+
+
+
+    @BeforeEach
+    public void setUp(){
+        chiisai = new Chiisai();
+    }
 
     @Test
     public void byteTest(){

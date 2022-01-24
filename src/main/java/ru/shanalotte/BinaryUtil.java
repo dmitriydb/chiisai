@@ -3,6 +3,11 @@ package ru.shanalotte;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+
 public class BinaryUtil {
      private static final Logger logger = LoggerFactory.getLogger(BinaryUtil.class);
     public static double binaryStringToDouble(String myBinStr)
@@ -31,5 +36,30 @@ public class BinaryUtil {
         }
         logger.debug("Значение = {}", myDbl);
         return myDbl;
+    }
+
+    public static String convertStringToBinary(String input) {
+
+        StringBuilder result = new StringBuilder();
+        char[] chars = input.toCharArray();
+        for (char aChar : chars) {
+            result.append(
+                    String.format("%8s", Integer.toBinaryString(aChar))
+                            .replaceAll(" ", "0")
+            );
+        }
+        return result.toString();
+
+    }
+
+    public static String binaryToText(String binary) {
+        return Arrays.stream(binary.split("(?<=\\G.{8})"))/* regex to split the bits array by 8*/
+                .parallel()
+                .map(eightBits -> (char)Integer.parseInt(eightBits, 2))
+                .collect(
+                        StringBuilder::new,
+                        StringBuilder::append,
+                        StringBuilder::append
+                ).toString();
     }
 }

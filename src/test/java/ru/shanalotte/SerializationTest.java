@@ -1,5 +1,8 @@
 package ru.shanalotte;
 
+import org.junit.Before;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -16,6 +19,13 @@ class EmptyClass{
 public class SerializationTest {
     private Chiisai chiisai = new Chiisai();
     private List<Byte> result = new ArrayList<>();
+
+    @Before
+    public void setUp(){
+        chiisai = new Chiisai();
+    }
+
+
 
     @Test
     public void emptyClassShouldSerializeToNothing(){

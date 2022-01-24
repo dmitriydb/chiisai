@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.Field;
 import java.util.BitSet;
 import static ru.shanalotte.Chiisai.*;
-import static ru.shanalotte.PrimitiveTypeDescriptor.*;
+import static ru.shanalotte.DescriptorType.*;
 
 public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
     private int nextPosition;
@@ -15,10 +15,13 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
 
     @Override
     public Object deserialize(BitSet bits, Class targetClass) {
+        this.nextPosition = 0;
         try {
             this.bits = bits;
             Object result = targetClass.newInstance();
             for (Field field : targetClass.getDeclaredFields()){
+                if (field.getName().contains("__$lineHits$__")) continue;
+                logger.debug("Field name = {}", field.getName());
                 field.setAccessible(true);
                 Object fieldValue = readNextField();
                 field.set(result, fieldValue);
@@ -34,20 +37,30 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
 
     private boolean readNullFlag(){
         nextPosition++;
-        if (bits.get(nextPosition - 1))
-            return true;
-        return false;
+        return bits.get(nextPosition - 1);
     }
 
     private Object readNextField() {
         //читаем тип поля
-        PrimitiveTypeDescriptor descriptor = readDescriptor();
+        DescriptorType descriptor = readDescriptor();
         logger.debug("Прочитали дескриптор {}", descriptor.toString());
         //читаем длину поля
         boolean isNull = readNullFlag();
         if (isNull) return null;
 
-        if (descriptor == PrimitiveTypeDescriptor.BOOLEAN){
+
+        if (descriptor == STRING){
+            logger.debug("Это строка");
+            String bitsLine = readNextNBits(VALUE_LENGTH);
+            int len = (int)binaryStringToNumber(bitsLine);
+            logger.debug("Длина поля равна {} бит", len);
+            String valueLine = readNextNBits(len);
+            String result = BinaryUtil.binaryToText(valueLine);
+            logger.debug("Значение строки [{}]", result);
+            return result;
+        }
+
+        if (descriptor == BOOLEAN){
             logger.debug("Это boolean");
             String bitsLine = readNextNBits(1);
             return bitsLine.equals("1");
@@ -80,10 +93,10 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
     }
 
 
-    private PrimitiveTypeDescriptor readDescriptor() {
+    private DescriptorType readDescriptor() {
         String bitsLine = readNextNBits(DESCRIPTOR_LENGTH);
         int descriptor = (int)binaryStringToNumber(bitsLine);
-        return PrimitiveTypeDescriptor.values()[descriptor];
+        return DescriptorType.values()[descriptor];
     }
 
     private long binaryStringToNumber(String bitsLine){

@@ -36,6 +36,7 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer{
     }
 
     public BitSet serialize(Object target) throws IllegalAccessException {
+        this.nextPosition = 0;
         bits = new BitSet();
         Field[] fields = target.getClass().getDeclaredFields();
         for (Field field : fields){
@@ -44,7 +45,7 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer{
         return bits;
     }
 
-    private void writeTypeDescriptor(BitSet bits, int descriptor){
+    private void writeTypeDescriptor(int descriptor){
         logger.debug("Writing descriptor {}", descriptor);
 
         for (int i = DESCRIPTOR_LENGTH - 1; i >= 0; i--) {
@@ -56,7 +57,7 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer{
         nextPosition += DESCRIPTOR_LENGTH;
     }
 
-    private void writeLongValue(BitSet bits, long value){
+    private void writeLongValue(long value){
         logger.debug("Writing long value {}", value);
 
         boolean isNegative = false;
@@ -76,7 +77,7 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer{
             len++;
         }
         while (value != 0);
-        writePrimitiveTypeLength(bits, len + 1);
+        writeLength(len + 1);
         if (isNegative){
             bits.set(nextPosition);
         }
@@ -88,7 +89,7 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer{
         nextPosition += len;
     }
 
-    private void writePrimitiveTypeLength(BitSet bits, int length) {
+    private void writeLength(int length) {
         logger.debug("Writing length {}", length);
         for (int i = VALUE_LENGTH; i >= 0; i--) {
             if (length % 2 == 1){
@@ -105,19 +106,19 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer{
             long longValue = 0L;
             if (value instanceof Integer){
                 longValue = number.intValue();
-                writeLongValue(bits, longValue);
+                writeLongValue(longValue);
             }
             if (value instanceof Byte){
                 longValue = number.byteValue();
-                writeLongValue(bits, longValue);
+                writeLongValue(longValue);
             }
             if (value instanceof Long){
                 longValue = number.longValue();
-                writeLongValue(bits, longValue);
+                writeLongValue(longValue);
             }
             if (value instanceof Short){
                 longValue = number.shortValue();
-                writeLongValue(bits, longValue);
+                writeLongValue(longValue);
             }
             if (value instanceof Double || value instanceof Float){
                 Double doubleValue = number.doubleValue();
@@ -126,7 +127,7 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer{
         }
         if (value instanceof Character){
             long longValue = (Character) value;
-            writeLongValue(bits, longValue);
+            writeLongValue(longValue);
         }
         if (value instanceof Boolean){
             Boolean booleanValue = (Boolean) value;
@@ -141,7 +142,7 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer{
         logger.debug("Writing double value {}", value);
         String valueString = Long.toBinaryString(Double.doubleToRawLongBits(value));
         logger.debug("Записываем {}", valueString);
-        writePrimitiveTypeLength(bits, valueString.length());
+        writeLength(valueString.length());
         for (char c : valueString.toCharArray()){
             if (c == '1')
                 bits.set(nextPosition);
@@ -150,24 +151,51 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer{
     }
 
     private void serializeField(Field field, BitSet bits, Object target) throws IllegalAccessException {
+        if (field.getName().equals("__$lineHits$__")) return;
         field.setAccessible(true);
         int descriptor = 0;
         if (field.getType().isPrimitive()){
             //записать тип
-            descriptor = Arrays.stream(PrimitiveTypeDescriptor.values()).filter(value -> value.getPrimitiveTypeName().equals(field.getType().getTypeName())).findFirst().orElse(null).ordinal();
+            descriptor = Arrays.stream(DescriptorType.values()).filter(value -> value.getPrimitiveTypeName().equals(field.getType().getTypeName())).findFirst().orElse(null).ordinal();
         }
         else if (isWrapperType(field.getType())){
-           descriptor = Arrays.stream(PrimitiveTypeDescriptor.values()).filter(value -> value.getWrapperTypeName().equals(field.getType().getTypeName())).findFirst().orElse(null).ordinal();
+           descriptor = Arrays.stream(DescriptorType.values()).filter(value -> value.getWrapperTypeName().equals(field.getType().getTypeName())).findFirst().orElse(null).ordinal();
         }
-        writeTypeDescriptor(bits, descriptor);
+        else if (field.getType().getName().equals("java.lang.String")){
+            descriptor = DescriptorType.STRING.ordinal();
+        }
+        logger.debug("Descriptor {}", descriptor);
+        writeTypeDescriptor(descriptor);
         if (field.get(target) == null){
             bits.set(nextPosition);
             nextPosition++;
+            logger.debug("Writing null flag 1");
             return;
         }
+        logger.debug("Writing null flag 0");
         nextPosition++;
         //записать длину значения
         //записать значение
+        if (descriptor == DescriptorType.STRING.ordinal()){
+            writeStringValue(field.get(target));
+        }
+        else
         writePrimitiveValue(field.get(target));
     }
+
+    private void writeStringValue(Object stringValue) {
+        String bitsString = BinaryUtil.convertStringToBinary((String)stringValue);
+        writeLength(bitsString.length());
+        writeBitsString(bitsString);
+    }
+
+    private void writeBitsString(String bitsString) {
+        for (char c : bitsString.toCharArray()){
+            if (c == '1')
+                bits.set(nextPosition);
+            nextPosition++;
+        }
+    }
+
+
 }
