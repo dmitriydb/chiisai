@@ -46,23 +46,33 @@ public class Chiisai {
     private ChiisaiDeserializer deserializer;
     private BitSet bits = new BitSet();
 
+    /**
+     * Внутренний класс для предоставления API
+     */
     public class ChiisaiBox{
-        public void andStoreIn(List<Byte> result){
-            for (byte b : bits.toByteArray()){
-                result.add(b);
-            }
+
+        /**
+         * Этот класс не нужно создавать вне данного пакета
+         */
+        ChiisaiBox(){
+
         }
+
+        public byte[] toBytes(){
+           return bits.toByteArray();
+        }
+
         public Object andUnshrink() {
             return unshrink();
         }
 
-        public Object unshrink() {
+        private Object unshrink() {
             return deserializer.deserialize(bits, targetClass);
         }
 
         public void andWriteTo(OutputStream out) throws IOException {
                 out.write(bits.toByteArray());
-            }
+           }
 
     }
 

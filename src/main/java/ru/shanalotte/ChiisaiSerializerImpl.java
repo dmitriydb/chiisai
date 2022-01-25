@@ -14,8 +14,9 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer {
 
     private BitSet bits = new BitSet();
     private int nextPosition;
+    private int nextCachedObjectNumber = 0;
     private static final Logger logger = LoggerFactory.getLogger(ChiisaiSerializerImpl.class);
-
+    private IdentityHashMap<Object, Integer> cachedObjects = new IdentityHashMap<>();
     private static final Set<Class<?>> WRAPPER_TYPES = getWrapperTypes();
 
     private static boolean isWrapperType(Class<?> clazz) {
@@ -37,6 +38,8 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer {
 
     @Override
     public BitSet serialize(Object target) throws IllegalAccessException {
+        cachedObjects = new IdentityHashMap<>();
+        nextCachedObjectNumber = 0;
         this.nextPosition = 0;
         bits = new BitSet();
         serializeObject(target);
@@ -193,6 +196,16 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer {
         } else {
             try {
                 descriptor = DescriptorType.OBJECT.ordinal();
+                if (!cachedObjects.containsKey(value)){
+                    logger.debug("Такой объект еще не был сериализован, добавляем на него ссылку с номером {}", nextCachedObjectNumber);
+                    cachedObjects.put(value, nextCachedObjectNumber++);
+                }
+                else {
+                    logger.debug("Такой объект уже был сериализован, номер ссылки = {}", cachedObjects.get(value));
+                    writeTypeDescriptor(DescriptorType.CACHED_OBJECT_REFENCE.ordinal());
+                    writeCachedObjectReference(cachedObjects.get(value));
+                    return;
+                }
                 writeTypeDescriptor(descriptor);
                 int oldPosition = nextPosition;
                 BitSet oldBitSet = bits;
@@ -241,6 +254,17 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer {
             length /= 2;
         }
         nextPosition += ARRAY_SIZE_LENGTH;
+    }
+
+    private void writeCachedObjectReference(int ref) {
+        logger.debug("Номер ссылки на объект {} ({})", ref, Integer.toBinaryString(ref));
+        for (int i = CACHED_OBJECT_REFERENCE_LENGTH; i >= 0; i--) {
+            if (ref % 2 == 1) {
+                bits.set(nextPosition + i - 1);
+            }
+            ref /= 2;
+        }
+        nextPosition += CACHED_OBJECT_REFERENCE_LENGTH;
     }
 
     private void writeStringValue(Object stringValue) {

@@ -13,7 +13,8 @@ public enum DescriptorType {
     STRING("string", "java.lang.String"),
     OBJECT("object", "java.lang.Object"),
     ARRAY("array", "java.lang.Array"),
-    NULL("null", "null");
+    NULL("null", "null"),
+    CACHED_OBJECT_REFENCE("reference", "ref");
 
     private String primitiveTypeName;
     private String wrapperTypeName;

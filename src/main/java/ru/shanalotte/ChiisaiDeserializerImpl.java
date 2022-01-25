@@ -7,17 +7,23 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.BitSet;
+import java.util.IdentityHashMap;
+
 import static ru.shanalotte.Chiisai.*;
 import static ru.shanalotte.DescriptorType.*;
 
 public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
     private int nextPosition;
+    private int nextCachedObjectIndex = 0;
     private BitSet bits;
     private static final Logger logger = LoggerFactory.getLogger(ChiisaiDeserializerImpl.class);
+    private IdentityHashMap<Object, Integer> cachedObjects = new IdentityHashMap<>();
 
     @Override
     public Object deserialize(BitSet bits, Class targetClass) {
+        this.cachedObjects = new IdentityHashMap<>();
         this.nextPosition = 0;
+        this.nextCachedObjectIndex = 0;
         try {
             this.bits = bits;
             Object result = targetClass.newInstance();
@@ -55,6 +61,13 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
             logger.debug("= NULL, continue");
             return null;
         }
+        if (descriptor == CACHED_OBJECT_REFENCE){
+            String refBits = readNextNBits(CACHED_OBJECT_REFERENCE_LENGTH);
+            int ref = (int)binaryStringToNumber(refBits);
+            logger.debug("Это ссылка на объект # {}", ref);
+            return cachedObjects.entrySet().stream().filter(e -> e.getValue() == ref).findFirst().get().getKey();
+
+        }
         if (descriptor == OBJECT){
             BitSet oldbits = bits;
             BitSet newbits = new BitSet();
@@ -75,6 +88,12 @@ public class ChiisaiDeserializerImpl implements ChiisaiDeserializer{
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
             }
+            if (!cachedObjects.containsKey(result)){
+                logger.debug("Такой объект еще не был десериализован, добавляем под ссылкой {}", nextCachedObjectIndex);
+                cachedObjects.put(result, nextCachedObjectIndex++);
+            }
+            nextCachedObjectIndex++;
+
             bits = oldbits;
             nextPosition = oldPosition;
             return result;

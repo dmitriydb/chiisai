@@ -29,9 +29,9 @@ public class SerializationTest {
 
     @Test
     public void emptyClassShouldSerializeToNothing(){
-        chiisai.shrink(new EmptyClass())
-                .andStoreIn(result);
-        assertTrue(result.size() == 0);
+
+
+        assertTrue( chiisai.shrink(new EmptyClass()).toBytes().length == 0);
     }
 
     @Test
@@ -52,14 +52,14 @@ public class SerializationTest {
     @Test
     public void allPrimitivesAreSavedCorrectly(){
         SomePrimitiveValuesHolder target = new SomePrimitiveValuesHolder();
-        chiisai.shrink(target).andStoreIn(result);
+        chiisai.shrink(target).toBytes();
 
     }
 
     @Test
     public void tryingToUnshrinkTheClassWithAllPrimitivesSet(){
         SomePrimitiveValuesHolder target = new SomePrimitiveValuesHolder();
-        chiisai.shrink(target).andStoreIn(result);
+        chiisai.shrink(target).toBytes();
         SomePrimitiveValuesHolder unshrinked = (SomePrimitiveValuesHolder) chiisai.shrink(target).andUnshrink();
     }
 
