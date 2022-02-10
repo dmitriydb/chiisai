@@ -47,17 +47,24 @@ public class ChiisaiSerializerImpl implements ChiisaiSerializer {
     }
 
     public void serializeObject(Object target) throws IllegalAccessException {
-        Field[] fields = target.getClass().getDeclaredFields();
-        for (Field field : fields) {
-            //игнорируем поле, добавляемое в классы IDEA во время тестирования с покрытием
-            if (field.getName().equals("__$lineHits$__")) continue;
-            if (Modifier.isStatic(field.getModifiers()) || Modifier.isFinal(field.getModifiers())){
-                continue;
+
+        Class z = target.getClass();
+        do{
+            Field[] fields = z.getDeclaredFields();
+            for (Field field : fields) {
+                //игнорируем поле, добавляемое в классы IDEA во время тестирования с покрытием
+                if (field.getName().equals("__$lineHits$__")) continue;
+                if (Modifier.isStatic(field.getModifiers()) ){
+                    continue;
+                }
+                logger.debug("Сериализуется поле {}", field.getName());
+                field.setAccessible(true);
+                writeObject(field.get(target));
             }
-            logger.debug("Сериализуется поле {}", field.getName());
-            field.setAccessible(true);
-            writeObject(field.get(target));
         }
+        while( (z = z.getSuperclass()) != null);
+
+
     }
 
     private void writeTypeDescriptor(int descriptor) {

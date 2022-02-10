@@ -104,6 +104,8 @@ public class Chiisai {
         bits = BitSet.valueOf(BinaryUtil.readBytesFromInputStream(in));
         return deserializer.deserialize(bits, targetClass);
         }
+
+
     }
 
 
