@@ -1,16 +1,8 @@
-Компактный сериализатор Java-классов.
+**Компактный сериализатор Java-классов**
 
-Поддерживает простое кеширование объектов, благодаря чему одни и те же объекты не сериализуются дважды.
-
-## Формат сериализации
-
-Сериализованный объект ::= {Сериализованное поле1 ... Сериализованное полеN}
-
-Сериализованное поле ::= (Сериализованный объект | Значение поля)
-
-Значение поля ::= Дескриптор (4 бита) | Длина содержимого N (8 бит) | Содержимое (N бит)
-
-Дескриптор ::= INT | LONG | ... | OBJECT | ARRAY | NULL | OBJECT_REFERENCE...
+На данный момент не поддерживается:
+- сериализация массивов с уровнем вложенности > 2
+- сериализация классов без конструктора без параметров
 
 ## Пример использования
 ### Сериализация
@@ -30,7 +22,7 @@ byte[] bytes = new Chiisai().shrink(myCoolObject).toBytes();
 Из файла:
 ```java
 ...
-MyCoolObject myCoolObjectAfterDeserializing2 = (MyCoolObject) new Chiisai().readAndUnshrink(new FileInputStream("..."), MyCoolObject.class);
+MyCoolObject myCoolObjectAfterDeserializing = (MyCoolObject) new Chiisai().readAndUnshrink(new FileInputStream("..."), MyCoolObject.class);
 ```
 
 Вариант для тестирования:
@@ -38,3 +30,13 @@ MyCoolObject myCoolObjectAfterDeserializing2 = (MyCoolObject) new Chiisai().read
 ...
 MyCoolObject myCoolObjectAfterDeserializing = (MyCoolObject) new Chiisai().shrink(myCoolObject).andUnshrink();
 ```
+
+## Формат сериализации
+
+Сериализованный объект ::= {Сериализованное поле1 ... Сериализованное полеN}
+
+Сериализованное поле ::= (Сериализованный объект | Значение поля)
+
+Значение поля ::= Дескриптор (4 бита) | Длина содержимого N (8 бит) | Содержимое (N бит)
+
+Дескриптор ::= INT | LONG | ... | OBJECT | ARRAY | NULL | OBJECT_REFERENCE...
