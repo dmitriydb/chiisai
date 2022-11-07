@@ -1,34 +1,38 @@
 **Компактный сериализатор Java-классов**
 
-На данный момент не поддерживается:
-- сериализация массивов с уровнем вложенности > 2
-- сериализация классов без конструктора без параметров
-
 ## Пример использования
 ### Сериализация
 Запись в файл:
 ```java
 MyCoolObject myCoolObject = new MyCoolObject();
-new Chiisai().shrink(myCoolObject).andWriteTo(new PrintStream("somefile"));
+new Chiisai()
+    .shrink(myCoolObject)
+    .andWriteTo(new PrintStream("somefile"));
 ```
 
 В массив байт:
 ```java
 MyCoolObject myCoolObject = new MyCoolObject();
-byte[] bytes = new Chiisai().shrink(myCoolObject).toBytes();
+byte[] bytes = new Chiisai()
+    .shrink(myCoolObject)
+    .toBytes();
 ```
 
 ### Десериализация
 Из файла:
 ```java
 ...
-MyCoolObject myCoolObjectAfterDeserializing = (MyCoolObject) new Chiisai().readAndUnshrink(new FileInputStream("..."), MyCoolObject.class);
+MyCoolObject myCoolObjectAfterDeserializing = 
+(MyCoolObject) new Chiisai().
+    readAndUnshrink(new FileInputStream("..."), MyCoolObject.class);
 ```
 
 Вариант для тестирования:
 ```java
 ...
-MyCoolObject myCoolObjectAfterDeserializing = (MyCoolObject) new Chiisai().shrink(myCoolObject).andUnshrink();
+MyCoolObject myCoolObjectAfterDeserializing = (MyCoolObject) new Chiisai()
+    .shrink(myCoolObject)
+    .andUnshrink();
 ```
 
 ## Формат сериализации
